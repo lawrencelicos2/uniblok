@@ -406,7 +406,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     const worker = $('wurl').value.trim(), key = $('wkey').value;
     if (!worker || !key){ $('settings').open = true; showMsg('Enter your Worker address and key first.', true); return; }
     store.set('wurl', worker); store.set('wkey', key);
-    const nat = $('native').checked;
+    const nat = $('native').checked && !isYouTube(toUrl(input));
     $('frame').style.display = nat ? 'block' : 'none'; $('viewport').style.display = nat ? 'none' : '';
     if (nat) return openNative(input, push);
     let url = toUrl(input);
@@ -477,7 +477,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
   });
   $('go').onclick = () => { if ($('q').value.trim()) navigate($('q').value); };
   $('q').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
-  $('back').onclick = () => { if ($('native').checked){ $('frame').contentWindow.postMessage({uniBack: 1}, '*'); return; } if (hist.length > 1){ hist.pop(); navigate(hist.pop(), true); } };
+  $('back').onclick = () => { if ($('frame').style.display === 'block'){ $('frame').contentWindow.postMessage({uniBack: 1}, '*'); return; } if (hist.length > 1){ hist.pop(); navigate(hist.pop(), true); } };
 })();
 </script>
 </body>
