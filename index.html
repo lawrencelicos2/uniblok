@@ -7,7 +7,7 @@
 <style>
 :root{
   color-scheme: dark;
-  --bg:#0b1115; --panel:#131b21; --ink:#e7edf1; --muted:#8aa0ad; --line:#223039; --accent:#ff7a3d; --err:#ff6b6b;
+  --bg:#1c1c1c; --panel:#242424; --ink:#ffffff; --muted:#b3b3b3; --line:#ffffff; --accent:#ffffff; --err:#ff8a8a;
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
   box-sizing:border-box;
   padding-top: env(safe-area-inset-top, 0px);
@@ -35,6 +35,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
 .note.err{color:var(--err)}
 #stage{flex:1 1 auto;min-height:0;display:flex}
 #viewport{flex:1;background:#fff;overflow:auto}
+#frame{flex:1;width:100%;border:0;background:#fff;display:none}
 @media(max-width:700px){
   .topbar{flex-wrap:wrap}
   .topbar h1{flex:0 0 100%}
@@ -51,6 +52,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     <button id="go">Go</button>
     <div class="row"><input id="imgs" type="checkbox"><label for="imgs">Images</label></div>
     <div class="row"><input id="cookies" type="checkbox"><label for="cookies">Allow cookies</label></div>
+    <div class="row"><input id="native" type="checkbox"><label for="native">Native view</label></div>
   </div>
 
   <details class="settings" id="settings">
@@ -58,7 +60,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     <div class="fields">
       <div>
         <label for="wurl">Worker address</label>
-        <input id="wurl" type="text" value="https://uni-blok.lawrencelicos2.workers.dev/?url=" autocomplete="off" style="width:100%">
+        <input id="wurl" type="text" value="https://uni-blok2.lawrencelicos2.workers.dev/?url=" autocomplete="off" style="width:100%">
       </div>
       <div>
         <label for="wkey">Worker key</label>
@@ -68,7 +70,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     <p class="note" style="padding:6px 0 0">Saved in this browser only. If this ever stops matching your live Worker address, edit it here.</p>
   </details>
 
-  <div id="stage"><div id="viewport"></div></div>
+  <div id="stage"><div id="viewport"></div><iframe id="frame" title="Page" sandbox="allow-scripts allow-forms allow-popups allow-modals allow-presentation allow-same-origin" allow="fullscreen; autoplay; encrypted-media; picture-in-picture"></iframe></div>
   <div class="note" id="note"></div>
 
 <script>
@@ -79,10 +81,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     set(k,v){ try { localStorage.setItem(k,v); } catch {} }
   };
 
-  // Bump this whenever the default Worker address/key below changes.
-  // If the browser's saved config is from an older version, the new
-  // defaults in the HTML win instead of a stale saved address.
-  const CONFIG_VERSION = '2';
+  const CONFIG_VERSION = '4';
   if (store.get('cfgVersion') !== CONFIG_VERSION) {
     store.set('cfgVersion', CONFIG_VERSION);
     store.set('wurl', $('wurl').value);
@@ -96,9 +95,10 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
   $('imgs').checked = store.get('imgs') === '1';
   $('imgs').onchange = () => store.set('imgs', $('imgs').checked ? '1' : '0');
   $('cookies').checked = store.get('cookies') === '1';
+  $('native').checked = store.get('native') !== '0';
+  $('native').onchange = () => store.set('native', $('native').checked ? '1' : '0');
   $('cookies').onchange = () => store.set('cookies', $('cookies').checked ? '1' : '0');
 
-  // --- simple per-domain cookie jar, stored locally in this browser ---
   const jar = (() => {
     let data = {};
     try { data = JSON.parse(store.get('jar') || '{}'); } catch {}
@@ -132,6 +132,27 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     .result a.title{color:#1a0dab;font-size:1.15rem;text-decoration:none}
     .result a.title:hover{text-decoration:underline}
     .result .snippet{color:#4d5156;font-size:.92rem;margin-top:3px}
+    .ddg{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;text-align:center;padding:64px 16px;color:#222}
+    .ddg-logo{font-size:2.2rem;font-weight:700;color:#de5833;margin-bottom:22px}
+    .ddg input{width:min(520px,90%);padding:12px 18px;font:inherit;color:#222;background:#fff;border:2px solid #de5833;border-radius:26px}
+    .ddg button{margin-left:8px;padding:12px 20px;font:inherit;font-weight:600;color:#fff;background:#de5833;border:0;border-radius:26px;cursor:pointer}
+    /* YouTube view */
+    .yt{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#0f0f0f}
+    .yt-head{display:flex;align-items:center;gap:14px;padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid #e5e5e5;flex-wrap:wrap}
+    .yt-logo{display:flex;align-items:center;gap:6px;text-decoration:none;color:#0f0f0f;font-weight:700;font-size:1.25rem;letter-spacing:-.04em}
+    .yt-search{display:flex;flex:1;min-width:200px;max-width:560px}
+    .yt-search input{flex:1;min-width:0;padding:9px 14px;font:inherit;color:#0f0f0f;background:#fff;border:1px solid #ccc;border-radius:20px 0 0 20px}
+    .yt-search button{padding:9px 18px;color:#0f0f0f;background:#f2f2f2;border:1px solid #ccc;border-left:0;border-radius:0 20px 20px 0;cursor:pointer;font:inherit}
+    .yt-player{position:relative;width:100%;max-width:960px;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden}
+    .yt-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+    .yt-title{font-size:1.2rem;font-weight:600;margin:12px 0 18px;max-width:960px}
+    .yt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:20px 16px}
+    .yt-card{display:block;color:inherit;text-decoration:none}
+    .yt-card img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#ddd;border-radius:10px}
+    .yt-card .t{font-weight:600;font-size:.95rem;line-height:1.3;margin-top:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .yt-card .m{font-size:.82rem;color:#606060;margin-top:3px}
+    .yt-card:hover .t{text-decoration:underline}
+    .yt-empty{color:#606060;padding:12px 0}
   </style><div class="page" id="p"></div>`;
   const pageEl = shadow.getElementById('p');
   const hist = [];
@@ -140,7 +161,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
   const toUrl = s => {
     s = s.trim();
     if (looksLikeUrl(s)) return /^https?:\/\//i.test(s) ? s : 'https://' + s;
-    return 'https://www.google.com/search?q=' + encodeURIComponent(s) + '&num=20';
+    return 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(s);
   };
   function resolveHref(href, base){
     try{
@@ -157,12 +178,18 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     pageEl.append(d);
   }
 
-  // Try to pull real {title, url, snippet} results out of a Google
-  // search results page. Google's markup/class names shift over time,
-  // so this is heuristic: it looks for the classic pattern (a link
-  // wrapping an h3 heading), not any specific class name. Returns
-  // [] if it can't find anything that looks like real results, so
-  // the caller can fall back to the plain stripped view.
+  function extractDuckDuckGoResults(doc, base){
+    const out = [];
+    doc.querySelectorAll('.result, .web-result').forEach(row => {
+      const a = row.querySelector('a.result__a, a.result__title, h2 a, a[href]');
+      if (!a) return;
+      const url = resolveHref(a.getAttribute('href') || '', base);
+      if (!url) return;
+      const snipEl = row.querySelector('.result__snippet, .result-snippet');
+      out.push({ title: a.textContent.trim(), url, snippet: (snipEl ? snipEl.textContent.trim() : '').slice(0, 300) });
+    });
+    return out;
+  }
   function extractGoogleResults(doc, base){
     const out = [];
     const seen = new Set();
@@ -171,7 +198,6 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
       if (!a) return;
       const url = resolveHref(a.getAttribute('href') || '', base);
       if (!url || seen.has(url)) return;
-      // walk up a few levels from the link to find a nearby snippet
       let snippet = '';
       let node = a.closest('div');
       for (let i = 0; node && i < 4 && !snippet; i++, node = node.parentElement){
@@ -186,7 +212,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     return out;
   }
 
-  function renderResults(results, query){
+  function renderResults(results){
     pageEl.innerHTML = '';
     const wrap = document.createElement('div'); wrap.className = 'results';
     results.forEach(r => {
@@ -200,15 +226,150 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     pageEl.append(wrap);
   }
 
-  function render(html, base, isGoogleSearch, query){
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    if (isGoogleSearch){
-      const results = extractGoogleResults(doc, base);
-      if (results.length){ renderResults(results, query); return; }
+  // ---------- YouTube ----------
+  // YouTube's HTML is an empty shell; the real content is a JSON blob
+  // (ytInitialData) that normally only its JavaScript turns into a page.
+  // We read that blob ourselves and draw the logo, search box and video cards.
+  const isYouTube = u => { try { return /(^|\.)youtube\.com$/.test(new URL(u).hostname); } catch { return false; } };
+
+  function ytJson(html){
+    const i = html.search(/ytInitialData\s*=\s*\{/);
+    if (i < 0) return null;
+    const s = html.indexOf('{', i);
+    let depth = 0, inStr = false, esc = false;
+    for (let k = s; k < html.length; k++){
+      const c = html[k];
+      if (inStr){ if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+      if (c === '"') inStr = true;
+      else if (c === '{') depth++;
+      else if (c === '}' && --depth === 0){
+        try { return JSON.parse(html.slice(s, k + 1)); } catch { return null; }
+      }
     }
-    doc.querySelectorAll('script,style,iframe,frame,object,embed,form,link,meta,base,noscript,svg,canvas,template').forEach(n => n.remove());
+    return null;
+  }
+
+  function ytVideos(root){
+    const out = [], seen = new Set();
+    const txt = t => !t ? '' : (t.simpleText || (t.runs || []).map(r => r.text).join('') || t.content || '');
+    (function walk(o){
+      if (!o || typeof o !== 'object') return;
+      if (Array.isArray(o)){ o.forEach(walk); return; }
+      let id = '', title = '', meta = '';
+      if (typeof o.videoId === 'string' && o.title && (o.thumbnail || o.lengthText || o.ownerText || o.shortBylineText)){
+        id = o.videoId; title = txt(o.title);
+        meta = [txt(o.ownerText || o.shortBylineText), txt(o.viewCountText || o.shortViewCountText), txt(o.publishedTimeText)].filter(Boolean).join(' \u2022 ');
+      } else if (o.contentType === 'LOCKUP_CONTENT_TYPE_VIDEO' && o.contentId){
+        const m = o.metadata && o.metadata.lockupMetadataViewModel;
+        id = o.contentId; title = m && m.title ? m.title.content : '';
+        const rows = (m && m.metadata && m.metadata.contentMetadataViewModel && m.metadata.contentMetadataViewModel.metadataRows) || [];
+        meta = rows.map(r => (r.metadataParts || []).map(p => p.text && p.text.content).filter(Boolean).join(' \u2022 ')).filter(Boolean).join(' \u2022 ');
+      }
+      if (id && title && !seen.has(id)){ seen.add(id); out.push({ id, title, meta }); }
+      for (const k in o) walk(o[k]);
+    })(root);
+    return out;
+  }
+
+  const isDDGHome = u => { try { const x = new URL(u); return /^(www\.)?duckduckgo\.com$/.test(x.hostname) && x.pathname === '/' && !x.searchParams.get('q'); } catch { return false; } };
+  function renderDDG(){
+    pageEl.innerHTML = '';
+    const w = document.createElement('div'); w.className = 'ddg';
+    const l = document.createElement('div'); l.className = 'ddg-logo'; l.textContent = 'DuckDuckGo';
+    const i = document.createElement('input'); i.type = 'text'; i.placeholder = 'Search the web'; i.setAttribute('aria-label', 'Search');
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Search';
+    const run = () => { const q = i.value.trim(); if (q) navigate(/^https?:\/\//i.test(q) ? q : 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q)); };
+    b.onclick = run; i.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+    w.append(l, i, b); pageEl.append(w); i.focus();
+  }
+
+  function renderYouTube(html, base){
+    const u = new URL(base);
+    const vid = u.pathname === '/watch' ? u.searchParams.get('v')
+              : ((/^\/(shorts|embed|live)\/([\w-]{6,})/.exec(u.pathname) || [])[2] || null);
+    const data = ytJson(html);
+    const vids = (data ? ytVideos(data) : []).filter(v => v.id !== vid);
+
+    pageEl.innerHTML = '';
+    const root = document.createElement('div'); root.className = 'yt';
+
+    // header: logo + search
+    const head = document.createElement('div'); head.className = 'yt-head';
+    const logo = document.createElement('a'); logo.className = 'yt-logo'; logo.dataset.go = 'https://www.youtube.com/';
+    logo.innerHTML = '<svg width="34" height="24" viewBox="0 0 34 24" aria-hidden="true"><rect width="34" height="24" rx="7" fill="#f00"/><path d="M13.5 6.8v10.4L22.5 12z" fill="#fff"/></svg><span>YouTube</span>';
+    const sw = document.createElement('div'); sw.className = 'yt-search';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Search YouTube';
+    inp.value = u.pathname === '/results' ? (u.searchParams.get('search_query') || '') : '';
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Search';
+    const run = () => { const q = inp.value.trim(); if (q) navigate('https://www.youtube.com/results?search_query=' + encodeURIComponent(q)); };
+    btn.onclick = run; inp.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+    sw.append(inp, btn); head.append(logo, sw); root.append(head);
+
+    // player for watch pages (loaded straight from YouTube's embed, not the Worker)
+    if (vid){
+      const box = document.createElement('div'); box.className = 'yt-player';
+      const f = document.createElement('iframe');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(vid);
+      f.allow = 'accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen';
+      f.allowFullscreen = true; f.title = 'YouTube video player'; f.referrerPolicy = 'strict-origin-when-cross-origin';
+      box.append(f); root.append(box);
+      const ext = document.createElement('a'); ext.href = 'https://www.youtube.com/watch?v=' + encodeURIComponent(vid); ext.target = '_blank'; ext.rel = 'noopener'; ext.textContent = 'Player not loading? Open on youtube.com'; ext.style.cssText = 'display:inline-block;margin-top:8px;font-size:.85rem';
+      root.append(ext);
+      const tm = /<title[^>]*>([^<]*)/i.exec(html);
+      if (tm){
+        const h = document.createElement('div'); h.className = 'yt-title';
+        h.textContent = new DOMParser().parseFromString(tm[1], 'text/html').documentElement.textContent.replace(/\s*-\s*YouTube\s*$/, '');
+        root.append(h);
+      }
+    }
+
+    if (vids.length){
+      const grid = document.createElement('div'); grid.className = 'yt-grid';
+      vids.forEach(v => {
+        const a = document.createElement('a'); a.className = 'yt-card'; a.dataset.go = 'https://www.youtube.com/watch?v=' + v.id;
+        const im = document.createElement('img'); im.src = 'https://i.ytimg.com/vi/' + v.id + '/mqdefault.jpg';
+        im.loading = 'lazy'; im.alt = ''; im.setAttribute('referrerpolicy', 'no-referrer');
+        const t = document.createElement('div'); t.className = 't'; t.textContent = v.title;
+        const m = document.createElement('div'); m.className = 'm'; m.textContent = v.meta;
+        a.append(im, t, m); grid.append(a);
+      });
+      root.append(grid);
+    } else if (!vid){
+      const e = document.createElement('div'); e.className = 'yt-empty';
+      e.textContent = data ? 'No videos on this page. Try searching above.' : 'YouTube sent no video data for this page. Try searching above.';
+      root.append(e);
+    }
+    pageEl.append(root);
+  }
+
+  // ---------- generic pages ----------
+  function firstSrcsetUrl(srcset){
+    if (!srcset) return '';
+    return srcset.split(',')[0].trim().split(/\s+/)[0] || '';
+  }
+  function bestImgSrc(el){
+    const direct = el.getAttribute('src');
+    if (direct && !/^data:image\/(gif|png);base64,?$|^$/.test(direct.trim())) return direct;
+    for (const attr of ['data-src', 'data-original', 'data-lazy-src', 'data-lazy', 'data-srcset', 'srcset']){
+      const v = el.getAttribute(attr);
+      if (!v) continue;
+      return attr.includes('srcset') ? firstSrcsetUrl(v) : v;
+    }
+    return direct || '';
+  }
+
+  function render(html, base, searchEngine, query){
+    if (isYouTube(base)){ renderYouTube(html, base); return; }
+    if (isDDGHome(base)){ renderDDG(); return; }
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    if (searchEngine){
+      const results = searchEngine === 'ddg' ? extractDuckDuckGoResults(doc, base) : extractGoogleResults(doc, base);
+      if (results.length){ renderResults(results); return; }
+    }
+    doc.querySelectorAll('script,style,iframe,frame,object,embed,link,meta,base,noscript,svg,canvas,template').forEach(n => n.remove());
     if (!$('imgs').checked) doc.querySelectorAll('img,picture,source,video,audio').forEach(n => n.remove());
     doc.querySelectorAll('*').forEach(el => {
+      const rawSrc = el.tagName === 'IMG' ? bestImgSrc(el) : null;
       for (const a of [...el.attributes]){
         const n = a.name.toLowerCase();
         if (n.startsWith('on') || ['style','srcset','class','id'].includes(n)) el.removeAttribute(a.name);
@@ -216,8 +377,11 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
       if (el.tagName === 'A'){
         const h = resolveHref(el.getAttribute('href') || '', base);
         el.removeAttribute('href'); if (h) el.dataset.go = h;
+      } else if (el.tagName === 'FORM'){
+        el.dataset.action = resolveHref(el.getAttribute('action') || '', base) || base;
+        ['action','method','target','enctype'].forEach(n => el.removeAttribute(n));
       } else if (el.tagName === 'IMG'){
-        const s = resolveHref(el.getAttribute('src') || '', base);
+        const s = resolveHref(rawSrc || '', base);
         if (s){ el.setAttribute('src', s); el.setAttribute('referrerpolicy','no-referrer'); } else el.remove();
       }
     });
@@ -225,12 +389,34 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     pageEl.append(...doc.body.childNodes);
   }
 
+  function openNative(input, push){
+    const t = input.trim();
+    const url = looksLikeUrl(t) ? (/^https?:\/\//i.test(t) ? t : 'https://' + t) : 'https://www.bing.com/search?q=' + encodeURIComponent(t);
+    const base = $('wurl').value.trim().replace(/\?.*$/, '');
+    $('frame').src = base + '?k=' + encodeURIComponent($('wkey').value) + '&url=' + encodeURIComponent(url);
+    if (push) hist.push(url);
+    $('q').value = url;
+    $('note').textContent = 'Native view: ' + new URL(url).hostname + ' loaded through your Worker.'; $('note').className = 'note';
+  }
+  window.addEventListener('message', e => {
+    if (e.source === $('frame').contentWindow && e.data && e.data.uniBlok) $('q').value = e.data.uniBlok;
+  });
+
   async function navigate(input, push = true){
     const worker = $('wurl').value.trim(), key = $('wkey').value;
     if (!worker || !key){ $('settings').open = true; showMsg('Enter your Worker address and key first.', true); return; }
     store.set('wurl', worker); store.set('wkey', key);
-    const url = toUrl(input);
-    const isGoogleSearch = /^https:\/\/www\.google\.[a-z.]+\/search/.test(url);
+    const nat = $('native').checked;
+    $('frame').style.display = nat ? 'block' : 'none'; $('viewport').style.display = nat ? 'none' : '';
+    if (nat) return openNative(input, push);
+    let url = toUrl(input);
+    if (/^https:\/\/(www\.)?duckduckgo\.com\/(\?|$)/.test(url)){
+      const dq = new URL(url).searchParams.get('q');
+      if (dq) url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(dq);
+    }
+    const searchEngine = /^https:\/\/html\.duckduckgo\.com\/html\//.test(url) ? 'ddg'
+                        : /^https:\/\/www\.google\.[a-z.]+\/search/.test(url) ? 'google'
+                        : null;
     const domain = new URL(url).hostname;
     $('note').textContent = 'Fetching…'; $('note').className = 'note'; showMsg('Loading…');
     try{
@@ -243,24 +429,30 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
       const r = await fetch(worker + encodeURIComponent(url), {headers, signal: ctl.signal});
       clearTimeout(t);
       if (r.status === 401) throw new Error('Wrong Worker key. Check the Worker settings above.');
-      if (r.status === 0 || !r) throw new Error('No response from the Worker — check the Worker address above.');
       if ($('cookies').checked){
         const sc = r.headers.get('x-set-cookie');
         if (sc){ try{ jar.merge(domain, JSON.parse(sc)); }catch{} }
       }
       let text = await r.text();
-      if (text.length > 1500000) text = text.slice(0, 1500000);
+      // YouTube pages are huge and the video data sits deep inside them
+      const limit = isYouTube(url) ? 6000000 : 1500000;
+      if (text.length > limit) text = text.slice(0, limit);
       const type = r.headers.get('content-type') || '';
       if (!r.ok && !/html/.test(type)){
         throw new Error('Worker error (' + r.status + '): ' + text.slice(0, 200));
       }
       if (/json|plain/.test(type) && !/html/.test(type)){
         pageEl.innerHTML = ''; const pre = document.createElement('pre'); pre.style.whiteSpace = 'pre-wrap'; pre.textContent = text; pageEl.append(pre);
-      } else if (/html|xml/.test(type)) render(text, url, isGoogleSearch, input);
+      } else if (/html|xml/.test(type)) render(text, url, searchEngine, input);
       else throw new Error('That address is a file, not a page.');
       if (push) hist.push(url);
-      $('q').value = isGoogleSearch ? (new URL(url)).searchParams.get('q') || url : url;
-      $('note').textContent = 'Fetched through your Cloudflare Worker.' + ($('cookies').checked ? ' Cookies on for ' + domain + '.' : '');
+      $('q').value = searchEngine ? (new URL(url)).searchParams.get('q') || url : url;
+      if (!r.ok){
+        $('note').textContent = domain + ' responded with status ' + r.status + ' — the page below may be incomplete, a block/rate-limit page, or empty.';
+        $('note').className = 'note err';
+      } else {
+        $('note').textContent = 'Fetched through your Cloudflare Worker.' + ($('cookies').checked ? ' Cookies on for ' + domain + '.' : '');
+      }
     }catch(e){
       const msg = e.name === 'AbortError' ? 'The Worker took too long to respond.' :
                   e.message === 'Failed to fetch' ? 'Could not reach the Worker. Check the Worker address in Worker settings matches the live Worker, and that it is deployed.' :
@@ -274,9 +466,18 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     const a = e.target.closest && e.target.closest('a');
     if (a && a.dataset.go){ e.preventDefault(); navigate(a.dataset.go); }
   });
+  shadow.addEventListener('submit', e => {
+    const f = e.target; e.preventDefault();
+    if (!f || !f.dataset || !f.dataset.action) return;
+    try{
+      const u = new URL(f.dataset.action);
+      for (const [k, v] of new FormData(f)) if (typeof v === 'string') u.searchParams.set(k, v);
+      navigate(u.href);
+    }catch{}
+  });
   $('go').onclick = () => { if ($('q').value.trim()) navigate($('q').value); };
   $('q').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
-  $('back').onclick = () => { if (hist.length > 1){ hist.pop(); navigate(hist.pop(), true); } };
+  $('back').onclick = () => { if ($('native').checked){ $('frame').contentWindow.postMessage({uniBack: 1}, '*'); return; } if (hist.length > 1){ hist.pop(); navigate(hist.pop(), true); } };
 })();
 </script>
 </body>
