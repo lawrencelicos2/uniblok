@@ -32,6 +32,7 @@ details.settings .fields{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
 details.settings .fields > div{flex:1;min-width:220px}
 details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bottom:4px}
 .note{font-size:.78rem;color:var(--muted);padding:4px 14px}
+.note.err{color:var(--err)}
 #stage{flex:1 1 auto;min-height:0;display:flex}
 #viewport{flex:1;background:#fff;overflow:auto}
 @media(max-width:700px){
@@ -64,7 +65,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
         <input id="wkey" type="password" value="ef0b1965-1c57-4e44-b927-54baebd516d2e2bc2033-5cb1-44b1-ae7d-df24e720a7d3" autocomplete="off" style="width:100%">
       </div>
     </div>
-    <p class="note" style="padding:6px 0 0">Saved in this browser only.</p>
+    <p class="note" style="padding:6px 0 0">Saved in this browser only. If this ever stops matching your live Worker address, edit it here.</p>
   </details>
 
   <div id="stage"><div id="viewport"></div></div>
@@ -77,8 +78,19 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     get(k){ try { return localStorage.getItem(k) || ''; } catch { return ''; } },
     set(k,v){ try { localStorage.setItem(k,v); } catch {} }
   };
-  if (store.get('wurl')) $('wurl').value = store.get('wurl');
-  if (store.get('wkey')) $('wkey').value = store.get('wkey');
+
+  // Bump this whenever the default Worker address/key below changes.
+  // If the browser's saved config is from an older version, the new
+  // defaults in the HTML win instead of a stale saved address.
+  const CONFIG_VERSION = '2';
+  if (store.get('cfgVersion') !== CONFIG_VERSION) {
+    store.set('cfgVersion', CONFIG_VERSION);
+    store.set('wurl', $('wurl').value);
+    store.set('wkey', $('wkey').value);
+  } else {
+    if (store.get('wurl')) $('wurl').value = store.get('wurl');
+    if (store.get('wkey')) $('wkey').value = store.get('wkey');
+  }
   $('wurl').onchange = () => store.set('wurl', $('wurl').value.trim());
   $('wkey').onchange = () => store.set('wkey', $('wkey').value);
   $('imgs').checked = store.get('imgs') === '1';
@@ -114,6 +126,12 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     a{color:#0645ad;cursor:pointer;text-decoration:underline}
     img,video{max-width:100%;height:auto} table{max-width:100%}
     .msg{padding:24px;font-family:system-ui,sans-serif;color:#444} .msg.err{color:#b42318}
+    .results{font-family:arial,sans-serif;padding:16px 20px}
+    .result{margin-bottom:22px;max-width:640px}
+    .result .url{color:#006621;font-size:.82rem;margin-bottom:2px;word-break:break-all}
+    .result a.title{color:#1a0dab;font-size:1.15rem;text-decoration:none}
+    .result a.title:hover{text-decoration:underline}
+    .result .snippet{color:#4d5156;font-size:.92rem;margin-top:3px}
   </style><div class="page" id="p"></div>`;
   const pageEl = shadow.getElementById('p');
   const hist = [];
@@ -138,8 +156,56 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     const d = document.createElement('div'); d.className = 'msg' + (err ? ' err' : ''); d.textContent = text;
     pageEl.append(d);
   }
-  function render(html, base){
+
+  // Try to pull real {title, url, snippet} results out of a Google
+  // search results page. Google's markup/class names shift over time,
+  // so this is heuristic: it looks for the classic pattern (a link
+  // wrapping an h3 heading), not any specific class name. Returns
+  // [] if it can't find anything that looks like real results, so
+  // the caller can fall back to the plain stripped view.
+  function extractGoogleResults(doc, base){
+    const out = [];
+    const seen = new Set();
+    doc.querySelectorAll('a h3').forEach(h3 => {
+      const a = h3.closest('a');
+      if (!a) return;
+      const url = resolveHref(a.getAttribute('href') || '', base);
+      if (!url || seen.has(url)) return;
+      // walk up a few levels from the link to find a nearby snippet
+      let snippet = '';
+      let node = a.closest('div');
+      for (let i = 0; node && i < 4 && !snippet; i++, node = node.parentElement){
+        const sib = node.nextElementSibling;
+        if (sib && sib.textContent && sib.textContent.trim().length > 20){
+          snippet = sib.textContent.trim();
+        }
+      }
+      seen.add(url);
+      out.push({ title: h3.textContent.trim(), url, snippet: snippet.slice(0, 300) });
+    });
+    return out;
+  }
+
+  function renderResults(results, query){
+    pageEl.innerHTML = '';
+    const wrap = document.createElement('div'); wrap.className = 'results';
+    results.forEach(r => {
+      const row = document.createElement('div'); row.className = 'result';
+      const urlDiv = document.createElement('div'); urlDiv.className = 'url'; urlDiv.textContent = r.url;
+      const a = document.createElement('a'); a.className = 'title'; a.textContent = r.title; a.dataset.go = r.url;
+      const snip = document.createElement('div'); snip.className = 'snippet'; snip.textContent = r.snippet;
+      row.append(urlDiv, a, snip);
+      wrap.append(row);
+    });
+    pageEl.append(wrap);
+  }
+
+  function render(html, base, isGoogleSearch, query){
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    if (isGoogleSearch){
+      const results = extractGoogleResults(doc, base);
+      if (results.length){ renderResults(results, query); return; }
+    }
     doc.querySelectorAll('script,style,iframe,frame,object,embed,form,link,meta,base,noscript,svg,canvas,template').forEach(n => n.remove());
     if (!$('imgs').checked) doc.querySelectorAll('img,picture,source,video,audio').forEach(n => n.remove());
     doc.querySelectorAll('*').forEach(el => {
@@ -164,8 +230,9 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     if (!worker || !key){ $('settings').open = true; showMsg('Enter your Worker address and key first.', true); return; }
     store.set('wurl', worker); store.set('wkey', key);
     const url = toUrl(input);
+    const isGoogleSearch = /^https:\/\/www\.google\.[a-z.]+\/search/.test(url);
     const domain = new URL(url).hostname;
-    $('note').textContent = 'Fetching…'; showMsg('Loading…');
+    $('note').textContent = 'Fetching…'; $('note').className = 'note'; showMsg('Loading…');
     try{
       const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 30000);
       const headers = {'x-key': key};
@@ -175,7 +242,8 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
       }
       const r = await fetch(worker + encodeURIComponent(url), {headers, signal: ctl.signal});
       clearTimeout(t);
-      if (r.status === 401) throw new Error('Wrong Worker key.');
+      if (r.status === 401) throw new Error('Wrong Worker key. Check the Worker settings above.');
+      if (r.status === 0 || !r) throw new Error('No response from the Worker — check the Worker address above.');
       if ($('cookies').checked){
         const sc = r.headers.get('x-set-cookie');
         if (sc){ try{ jar.merge(domain, JSON.parse(sc)); }catch{} }
@@ -183,17 +251,22 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
       let text = await r.text();
       if (text.length > 1500000) text = text.slice(0, 1500000);
       const type = r.headers.get('content-type') || '';
+      if (!r.ok && !/html/.test(type)){
+        throw new Error('Worker error (' + r.status + '): ' + text.slice(0, 200));
+      }
       if (/json|plain/.test(type) && !/html/.test(type)){
         pageEl.innerHTML = ''; const pre = document.createElement('pre'); pre.style.whiteSpace = 'pre-wrap'; pre.textContent = text; pageEl.append(pre);
-      } else if (/html|xml/.test(type)) render(text, url);
+      } else if (/html|xml/.test(type)) render(text, url, isGoogleSearch, input);
       else throw new Error('That address is a file, not a page.');
       if (push) hist.push(url);
-      $('q').value = url.startsWith('https://www.google.com/search') ? (new URL(url)).searchParams.get('q') || url : url;
+      $('q').value = isGoogleSearch ? (new URL(url)).searchParams.get('q') || url : url;
       $('note').textContent = 'Fetched through your Cloudflare Worker.' + ($('cookies').checked ? ' Cookies on for ' + domain + '.' : '');
-      $('viewport').scrollTop = 0;
     }catch(e){
-      showMsg(e.name === 'AbortError' ? 'The Worker took too long.' : e.message, true);
-      $('note').textContent = '';
+      const msg = e.name === 'AbortError' ? 'The Worker took too long to respond.' :
+                  e.message === 'Failed to fetch' ? 'Could not reach the Worker. Check the Worker address in Worker settings matches the live Worker, and that it is deployed.' :
+                  e.message;
+      showMsg(msg, true);
+      $('note').textContent = msg; $('note').className = 'note err';
     }
   }
 
