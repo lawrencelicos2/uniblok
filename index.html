@@ -2,55 +2,73 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relay – browse through Cloudflare</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Uni-Blok</title>
 <style>
-:root{--bg:#e9eef1;--panel:#f8fafb;--ink:#14222c;--muted:#5b6b76;--line:#c5d0d7;--accent:#b4400f;--err:#b42318;
-  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1a21;--panel:#16252f;--ink:#e6eef3;--muted:#8fa3b0;--line:#2a3d4a;--accent:#ff8a57;--err:#ff7b72}}
+:root{
+  color-scheme: dark;
+  --bg:#0b1115; --panel:#131b21; --ink:#e7edf1; --muted:#8aa0ad; --line:#223039; --accent:#ff7a3d; --err:#ff6b6b;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-sizing:border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);line-height:1.5}
-main{max-width:980px;margin:0 auto;padding:24px 16px 48px}
-h1{font-size:1.8rem;margin:0 0 14px;letter-spacing:-.02em}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
-label{display:block;font-size:.85rem;font-weight:600;margin:10px 0 4px}
-input[type=text],input[type=password]{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px}
-button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:10px 16px;cursor:pointer;color:#fff;background:var(--accent)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);line-height:1.5;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel);flex:0 0 auto}
+.topbar h1{font-size:1.05rem;margin:0;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.topbar .bar{display:flex;flex:1;gap:8px}
+.topbar input[type=text]{flex:1;min-width:0}
+input[type=text],input[type=password]{padding:9px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px}
+button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:9px 14px;cursor:pointer;color:#111;background:var(--accent)}
 button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
-input:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.bar{display:flex;gap:8px;margin-bottom:10px}
-.bar input{flex:1}
-.row{display:flex;align-items:center;gap:8px;font-size:.88rem;margin-bottom:10px}
-.row label{margin:0;font-weight:400}
-#viewport{background:#fff;border:1px solid var(--line);border-radius:6px;min-height:360px;overflow:auto}
-.note{font-size:.8rem;color:var(--muted);margin-top:8px}
-details summary{cursor:pointer;font-weight:600}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted);white-space:nowrap}
+.row label{font-weight:400}
+details.settings{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 14px;flex:0 0 auto}
+details.settings summary{cursor:pointer;font-weight:600;font-size:.85rem;color:var(--muted)}
+details.settings .fields{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+details.settings .fields > div{flex:1;min-width:220px}
+details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bottom:4px}
+.note{font-size:.78rem;color:var(--muted);padding:4px 14px}
+#stage{flex:1 1 auto;min-height:0;display:flex}
+#viewport{flex:1;background:#fff;overflow:auto}
+@media(max-width:700px){
+  .topbar{flex-wrap:wrap}
+  .topbar h1{flex:0 0 100%}
+}
 </style>
 </head>
 <body>
-<main>
-  <h1>Relay</h1>
+  <div class="topbar">
+    <h1>Uni-Blok</h1>
+    <button class="ghost" id="back" aria-label="Back">&larr;</button>
+    <div class="bar">
+      <input id="q" type="text" placeholder="Search Google or enter a web address" autocomplete="off">
+    </div>
+    <button id="go">Go</button>
+    <div class="row"><input id="imgs" type="checkbox"><label for="imgs">Images</label></div>
+    <div class="row"><input id="cookies" type="checkbox"><label for="cookies">Allow cookies</label></div>
+  </div>
 
-  <details class="panel" id="settings">
+  <details class="settings" id="settings">
     <summary>Worker settings</summary>
-    <label for="wurl">Worker address</label>
-    <input id="wurl" type="text" value="https://uniblok-relay.lawrencelicos2.workers.dev/?url=" autocomplete="off">
-    <label for="wkey">Worker key</label>
-    <input id="wkey" type="password" value="ef0b1965-1c57-4e44-b927-54baebd516d2e2bc2033-5cb1-44b1-ae7d-df24e720a7d3" autocomplete="off">
-    <p class="note">Saved in this browser only.</p>
+    <div class="fields">
+      <div>
+        <label for="wurl">Worker address</label>
+        <input id="wurl" type="text" value="https://uni-blok.lawrencelicos2.workers.dev/?url=" autocomplete="off" style="width:100%">
+      </div>
+      <div>
+        <label for="wkey">Worker key</label>
+        <input id="wkey" type="password" value="ef0b1965-1c57-4e44-b927-54baebd516d2e2bc2033-5cb1-44b1-ae7d-df24e720a7d3" autocomplete="off" style="width:100%">
+      </div>
+    </div>
+    <p class="note" style="padding:6px 0 0">Saved in this browser only.</p>
   </details>
 
-  <div class="panel">
-    <div class="bar">
-      <button class="ghost" id="back" aria-label="Back">&larr;</button>
-      <input id="q" type="text" placeholder="Search the web or enter a web address" autocomplete="off">
-      <button id="go">Go</button>
-    </div>
-    <div class="row"><input id="imgs" type="checkbox"><label for="imgs">Load images (they load straight from the site, not through Cloudflare)</label></div>
-    <div id="viewport"></div>
-    <div class="note" id="note"></div>
-  </div>
-</main>
+  <div id="stage"><div id="viewport"></div></div>
+  <div class="note" id="note"></div>
 
 <script>
 (() => {
@@ -63,9 +81,35 @@ details summary{cursor:pointer;font-weight:600}
   if (store.get('wkey')) $('wkey').value = store.get('wkey');
   $('wurl').onchange = () => store.set('wurl', $('wurl').value.trim());
   $('wkey').onchange = () => store.set('wkey', $('wkey').value);
+  $('imgs').checked = store.get('imgs') === '1';
+  $('imgs').onchange = () => store.set('imgs', $('imgs').checked ? '1' : '0');
+  $('cookies').checked = store.get('cookies') === '1';
+  $('cookies').onchange = () => store.set('cookies', $('cookies').checked ? '1' : '0');
+
+  // --- simple per-domain cookie jar, stored locally in this browser ---
+  const jar = (() => {
+    let data = {};
+    try { data = JSON.parse(store.get('jar') || '{}'); } catch {}
+    return {
+      get(domain){ return data[domain] || {}; },
+      getHeader(domain){
+        const d = this.get(domain);
+        return Object.entries(d).map(([k,v]) => k + '=' + v).join('; ');
+      },
+      merge(domain, setCookies){
+        const d = data[domain] || (data[domain] = {});
+        for (const sc of setCookies){
+          const m = /^([^=]+)=([^;]*)/.exec(sc);
+          if (m) d[m[1]] = m[2];
+        }
+        store.set('jar', JSON.stringify(data));
+      }
+    };
+  })();
 
   const shadow = $('viewport').attachShadow({mode:'open'});
   shadow.innerHTML = `<style>
+    :host{display:block;height:100%}
     .page{padding:18px 22px;font:16px/1.55 Georgia,serif;color:#111;overflow-wrap:anywhere}
     a{color:#0645ad;cursor:pointer;text-decoration:underline}
     img,video{max-width:100%;height:auto} table{max-width:100%}
@@ -78,12 +122,14 @@ details summary{cursor:pointer;font-weight:600}
   const toUrl = s => {
     s = s.trim();
     if (looksLikeUrl(s)) return /^https?:\/\//i.test(s) ? s : 'https://' + s;
-    return 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(s);
+    return 'https://www.google.com/search?q=' + encodeURIComponent(s) + '&num=20';
   };
   function resolveHref(href, base){
     try{
       const u = new URL(href, base);
       if (u.hostname.endsWith('duckduckgo.com') && u.pathname === '/l/' && u.searchParams.get('uddg')) return u.searchParams.get('uddg');
+      if (/(^|\.)google\.[a-z.]+$/.test(u.hostname) && u.pathname === '/url' && u.searchParams.get('q')) return u.searchParams.get('q');
+      if (/(^|\.)google\.[a-z.]+$/.test(u.hostname) && u.pathname.startsWith('/search')) return null;
       return /^https?:$/.test(u.protocol) ? u.href : null;
     }catch{ return null; }
   }
@@ -118,12 +164,22 @@ details summary{cursor:pointer;font-weight:600}
     if (!worker || !key){ $('settings').open = true; showMsg('Enter your Worker address and key first.', true); return; }
     store.set('wurl', worker); store.set('wkey', key);
     const url = toUrl(input);
+    const domain = new URL(url).hostname;
     $('note').textContent = 'Fetching…'; showMsg('Loading…');
     try{
       const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 30000);
-      const r = await fetch(worker + encodeURIComponent(url), {headers:{'x-key':key}, signal: ctl.signal});
+      const headers = {'x-key': key};
+      if ($('cookies').checked){
+        const c = jar.getHeader(domain);
+        if (c) headers['x-cookie'] = c;
+      }
+      const r = await fetch(worker + encodeURIComponent(url), {headers, signal: ctl.signal});
       clearTimeout(t);
       if (r.status === 401) throw new Error('Wrong Worker key.');
+      if ($('cookies').checked){
+        const sc = r.headers.get('x-set-cookie');
+        if (sc){ try{ jar.merge(domain, JSON.parse(sc)); }catch{} }
+      }
       let text = await r.text();
       if (text.length > 1500000) text = text.slice(0, 1500000);
       const type = r.headers.get('content-type') || '';
@@ -132,8 +188,8 @@ details summary{cursor:pointer;font-weight:600}
       } else if (/html|xml/.test(type)) render(text, url);
       else throw new Error('That address is a file, not a page.');
       if (push) hist.push(url);
-      $('q').value = url.startsWith('https://html.duckduckgo.com/html/') ? decodeURIComponent(url.split('q=')[1] || '') : url;
-      $('note').textContent = 'Fetched through your Cloudflare Worker.';
+      $('q').value = url.startsWith('https://www.google.com/search') ? (new URL(url)).searchParams.get('q') || url : url;
+      $('note').textContent = 'Fetched through your Cloudflare Worker.' + ($('cookies').checked ? ' Cookies on for ' + domain + '.' : '');
       $('viewport').scrollTop = 0;
     }catch(e){
       showMsg(e.name === 'AbortError' ? 'The Worker took too long.' : e.message, true);
