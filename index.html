@@ -161,7 +161,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
   const toUrl = s => {
     s = s.trim();
     if (looksLikeUrl(s)) return /^https?:\/\//i.test(s) ? s : 'https://' + s;
-    return 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(s);
+    return 'https://www.bing.com/search?q=' + encodeURIComponent(s);
   };
   function resolveHref(href, base){
     try{
@@ -187,6 +187,33 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
       if (!url) return;
       const snipEl = row.querySelector('.result__snippet, .result-snippet');
       out.push({ title: a.textContent.trim(), url, snippet: (snipEl ? snipEl.textContent.trim() : '').slice(0, 300) });
+    });
+    return out;
+  }
+  // Bing wraps result links in a redirect (bing.com/ck/a?u=a1<base64 url>); unwrap it.
+  const bingUnwrap = u => {
+    try{
+      const x = new URL(u);
+      if (/(^|\.)bing\.com$/.test(x.hostname) && x.pathname.startsWith('/ck/')){
+        const p = x.searchParams.get('u');
+        if (p && p.startsWith('a1')){
+          let b = p.slice(2).replace(/-/g, '+').replace(/_/g, '/');
+          while (b.length % 4) b += '=';
+          return decodeURIComponent(escape(atob(b)));
+        }
+      }
+    }catch{}
+    return u;
+  };
+  function extractBingResults(doc, base){
+    const out = [];
+    doc.querySelectorAll('li.b_algo').forEach(li => {
+      const a = li.querySelector('h2 a');
+      if (!a) return;
+      const url = resolveHref(a.getAttribute('href') || '', base);
+      if (!url) return;
+      const sn = li.querySelector('.b_caption p, p');
+      out.push({ title: a.textContent.trim(), url: bingUnwrap(url), snippet: (sn ? sn.textContent.trim() : '').slice(0, 300) });
     });
     return out;
   }
@@ -363,7 +390,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     if (isDDGHome(base)){ renderDDG(); return; }
     const doc = new DOMParser().parseFromString(html, 'text/html');
     if (searchEngine){
-      const results = searchEngine === 'ddg' ? extractDuckDuckGoResults(doc, base) : extractGoogleResults(doc, base);
+      const results = searchEngine === 'ddg' ? extractDuckDuckGoResults(doc, base) : searchEngine === 'bing' ? extractBingResults(doc, base) : extractGoogleResults(doc, base);
       if (results.length){ renderResults(results); return; }
     }
     doc.querySelectorAll('script,style,iframe,frame,object,embed,link,meta,base,noscript,svg,canvas,template').forEach(n => n.remove());
@@ -406,7 +433,8 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
     const worker = $('wurl').value.trim(), key = $('wkey').value;
     if (!worker || !key){ $('settings').open = true; showMsg('Enter your Worker address and key first.', true); return; }
     store.set('wurl', worker); store.set('wkey', key);
-    const nat = $('native').checked && !isYouTube(toUrl(input));
+    const u0 = toUrl(input);
+    const nat = $('native').checked && !isYouTube(u0) && !/^https:\/\/(www\.bing\.com\/search|html\.duckduckgo\.com\/html)/.test(u0);
     $('frame').style.display = nat ? 'block' : 'none'; $('viewport').style.display = nat ? 'none' : '';
     if (nat) return openNative(input, push);
     let url = toUrl(input);
@@ -415,6 +443,7 @@ details.settings label{display:block;font-size:.8rem;font-weight:600;margin-bott
       if (dq) url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(dq);
     }
     const searchEngine = /^https:\/\/html\.duckduckgo\.com\/html\//.test(url) ? 'ddg'
+                        : /^https:\/\/www\.bing\.com\/search/.test(url) ? 'bing'
                         : /^https:\/\/www\.google\.[a-z.]+\/search/.test(url) ? 'google'
                         : null;
     const domain = new URL(url).hostname;
