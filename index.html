@@ -3,358 +3,141 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Relay – browse through your other computer</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<title>Relay – browse through Cloudflare</title>
 <style>
-:root{
-  --bg:#e9eef1; --panel:#f8fafb; --ink:#14222c; --muted:#5b6b76; --line:#c5d0d7;
-  --host:#0b7a64; --join:#b4400f; --err:#b42318; --radius:6px;
-  font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg:#0f1a21; --panel:#16252f; --ink:#e6eef3; --muted:#8fa3b0; --line:#2a3d4a; --host:#3fc9a6; --join:#ff8a57; --err:#ff7b72;}
-}
+:root{--bg:#e9eef1;--panel:#f8fafb;--ink:#14222c;--muted:#5b6b76;--line:#c5d0d7;--accent:#b4400f;--err:#b42318;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a21;--panel:#16252f;--ink:#e6eef3;--muted:#8fa3b0;--line:#2a3d4a;--accent:#ff8a57;--err:#ff7b72}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);min-height:100vh;line-height:1.5}
-main{max-width:980px;margin:0 auto;padding:32px 20px 60px}
-h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:800;letter-spacing:-.03em;line-height:1;margin:0 0 10px}
-.sub{color:var(--muted);max-width:60ch;margin:0 0 28px}
-.split{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-@media(max-width:760px){.split{grid-template-columns:1fr}}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
-.panel.host{border-top:4px solid var(--host)}
-.panel.join{border-top:4px solid var(--join)}
-h2{margin:0 0 4px;font-size:1.25rem}
-.panel p{margin:0 0 14px;color:var(--muted);font-size:.92rem}
-label{display:block;font-size:.85rem;font-weight:600;margin:12px 0 4px}
-input[type=text],input[type=password]{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius)}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.5}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:1.8rem;margin:0 0 14px;letter-spacing:-.02em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:.85rem;font-weight:600;margin:10px 0 4px}
+input[type=text],input[type=password]{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px}
+button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:10px 16px;cursor:pointer;color:#fff;background:var(--accent)}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 input:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-button{font:inherit;font-weight:600;border:0;border-radius:var(--radius);padding:10px 16px;cursor:pointer;color:#fff;margin-top:16px}
-button.host{background:var(--host)} button.join{background:var(--join)}
-.dark-text button.host{color:#000}
-button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);margin-top:0}
-button:disabled{opacity:.5;cursor:not-allowed}
-.status{margin-top:14px;font-size:.9rem}
-.status.err{color:var(--err)}
-.status.ok{color:var(--host)}
-.log{margin-top:12px;max-height:180px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
-.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:.88rem}
-.hidden{display:none!important}
-/* browser */
-#browser{margin-top:22px}
 .bar{display:flex;gap:8px;margin-bottom:10px}
 .bar input{flex:1}
-.bar button{margin-top:0}
-#viewport{background:#fff;color:#111;border:1px solid var(--line);border-radius:var(--radius);min-height:360px;padding:0;overflow:auto}
+.row{display:flex;align-items:center;gap:8px;font-size:.88rem;margin-bottom:10px}
+.row label{margin:0;font-weight:400}
+#viewport{background:#fff;border:1px solid var(--line);border-radius:6px;min-height:360px;overflow:auto}
 .note{font-size:.8rem;color:var(--muted);margin-top:8px}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+details summary{cursor:pointer;font-weight:600}
 </style>
 </head>
 <body>
 <main>
   <h1>Relay</h1>
-  <p class="sub">Leave one computer hosting. From any other computer, join with the same name and code, then search or open pages: the host computer fetches them for you.</p>
 
-  <div class="split">
-    <section class="panel host" aria-labelledby="hh">
-      <h2 id="hh">Host this computer</h2>
-      <p>Keep this tab open. Nothing is listed publicly: a joiner needs both the name and the code.</p>
-      <label for="hname">Name</label>
-      <input id="hname" type="text" autocomplete="off" placeholder="e.g. home-pc">
-      <label for="hcode">Code (use something long)</label>
-      <input id="hcode" type="password" autocomplete="off">
-      <label for="hproxy">Your Cloudflare Worker address (fallback for sites that block direct requests)</label>
-      <input id="hproxy" type="text" placeholder="https://relay-proxy.YOURNAME.workers.dev/?url=">
-      <label for="hkey">Worker key</label>
-      <input id="hkey" type="password" autocomplete="off">
-      <div class="row"><input id="hallow" type="checkbox" checked><label for="hallow" style="margin:0;font-weight:400">Allow joined computers to fetch pages</label></div>
-      <button class="host" id="hstart">Start hosting</button>
-      <button class="ghost hidden" id="hstop">Stop hosting</button>
-      <div class="status" id="hstatus" role="status"></div>
-      <div class="log" id="hlog" aria-label="Request log"></div>
-    </section>
+  <details class="panel" id="settings">
+    <summary>Worker settings</summary>
+    <label for="wurl">Worker address</label>
+    <input id="wurl" type="text" value="https://uniblok-relay.lawrencelicos2.workers.dev/?url=" autocomplete="off">
+    <label for="wkey">Worker key</label>
+    <input id="wkey" type="password" value="ef0b1965-1c57-4e44-b927-54baebd516d2e2bc2033-5cb1-44b1-ae7d-df24e720a7d3" autocomplete="off">
+    <p class="note">Saved in this browser only.</p>
+  </details>
 
-    <section class="panel join" aria-labelledby="jh">
-      <h2 id="jh">Join a host</h2>
-      <p>Enter the host's name and code.</p>
-      <label for="jname">Name</label>
-      <input id="jname" type="text" autocomplete="off">
-      <label for="jcode">Code</label>
-      <input id="jcode" type="password" autocomplete="off">
-      <button class="join" id="jstart">Join</button>
-      <button class="ghost hidden" id="jstop">Leave</button>
-      <div class="status" id="jstatus" role="status"></div>
-    </section>
-  </div>
-
-  <section id="browser" class="panel hidden" aria-label="Browse through host">
+  <div class="panel">
     <div class="bar">
-      <button class="ghost" id="back" title="Back" aria-label="Back">&larr;</button>
+      <button class="ghost" id="back" aria-label="Back">&larr;</button>
       <input id="q" type="text" placeholder="Search the web or enter a web address" autocomplete="off">
-      <button class="join" id="go">Go</button>
+      <button id="go">Go</button>
     </div>
-    <div class="row" style="margin:0 0 10px"><input id="imgs" type="checkbox"><label for="imgs" style="margin:0;font-weight:400">Load images (they load straight from the site, not through the host)</label></div>
+    <div class="row"><input id="imgs" type="checkbox"><label for="imgs">Load images (they load straight from the site, not through Cloudflare)</label></div>
     <div id="viewport"></div>
-    <div class="note" id="loadnote"></div>
-  </section>
+    <div class="note" id="note"></div>
+  </div>
 </main>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const MAX_BYTES = 1500000;
-  const enc = new TextEncoder();
+  const store = {
+    get(k){ try { return localStorage.getItem(k) || ''; } catch { return ''; } },
+    set(k,v){ try { localStorage.setItem(k,v); } catch {} }
+  };
+  if (store.get('wurl')) $('wurl').value = store.get('wurl');
+  if (store.get('wkey')) $('wkey').value = store.get('wkey');
+  $('wurl').onchange = () => store.set('wurl', $('wurl').value.trim());
+  $('wkey').onchange = () => store.set('wkey', $('wkey').value);
 
-  async function sha(str){
-    const buf = await crypto.subtle.digest('SHA-256', enc.encode(str));
-    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
-  }
-  const norm = s => s.trim().toLowerCase();
-  // Room id is a hash of name+code, so the code never goes to the signaling server.
-  async function roomId(name, code){ return 'rly-' + (await sha('room\n' + norm(name) + '\n' + code)).slice(0,40); }
-  const proof = (name, code) => sha('proof\n' + norm(name) + '\n' + code);
-
-  /* ---------------- HOST ---------------- */
-  let hostPeer = null, hostConns = new Set();
-
-  function hlog(msg){
-    const d = document.createElement('div');
-    d.textContent = new Date().toLocaleTimeString() + '  ' + msg;
-    $('hlog').prepend(d);
-    while ($('hlog').children.length > 100) $('hlog').lastChild.remove();
-  }
-  function hstatus(msg, cls){ const s=$('hstatus'); s.textContent=msg; s.className='status '+(cls||''); }
-
-  function isBlockedHost(h){
-    h = h.toLowerCase();
-    if (h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal') || h === '[::1]' || h.startsWith('[')) return true;
-    const m = h.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
-    if (m){
-      const [a,b] = [+m[1], +m[2]];
-      if (a===10 || a===127 || a===0 || (a===169&&b===254) || (a===192&&b===168) || (a===172&&b>=16&&b<=31)) return true;
-    }
-    return false;
-  }
-
-  async function hostFetch(url){
-    let u;
-    try { u = new URL(url); } catch { throw new Error('Bad address'); }
-    if (!/^https?:$/.test(u.protocol)) throw new Error('Only http and https are allowed');
-    if (isBlockedHost(u.hostname)) throw new Error('Local and private addresses are blocked');
-    const attempts = [{target:url, headers:{}}];
-    const proxy = $('hproxy').value.trim();
-    if (proxy) attempts.push({target: proxy + encodeURIComponent(url), headers: {'x-key': $('hkey').value}});
-    let lastErr;
-    for (const {target, headers} of attempts){
-      try{
-        const ctl = new AbortController();
-        const t = setTimeout(() => ctl.abort(), 20000);
-        const r = await fetch(target, {signal: ctl.signal, redirect:'follow', headers});
-        clearTimeout(t);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        let text = await r.text();
-        if (text.length > MAX_BYTES) text = text.slice(0, MAX_BYTES);
-        return {body: text, type: r.headers.get('content-type') || ''};
-      }catch(e){ lastErr = e; }
-    }
-    throw new Error('Could not fetch (' + (lastErr && lastErr.message || 'blocked') + ')');
-  }
-
-  async function startHost(){
-    const name = $('hname').value, code = $('hcode').value;
-    if (!name.trim() || code.length < 4){ hstatus('Enter a name and a code of at least 4 characters.', 'err'); return; }
-    $('hstart').disabled = true;
-    hstatus('Starting…');
-    const id = await roomId(name, code);
-    const expected = await proof(name, code);
-    hostPeer = new Peer(id);
-    hostPeer.on('open', () => {
-      hstatus('Hosting as “' + name.trim() + '”. Waiting for a computer to join.', 'ok');
-      $('hstop').classList.remove('hidden'); $('hstart').classList.add('hidden');
-      hlog('hosting started');
-    });
-    hostPeer.on('error', e => {
-      $('hstart').disabled = false;
-      if (e.type === 'unavailable-id') hstatus('That name and code are already being hosted somewhere else.', 'err');
-      else hstatus('Connection problem: ' + e.type, 'err');
-    });
-    hostPeer.on('connection', conn => {
-      let authed = false;
-      const kill = setTimeout(() => { if(!authed) conn.close(); }, 8000);
-      conn.on('data', async msg => {
-        try{
-          if (!msg || typeof msg !== 'object') return;
-          if (msg.t === 'hello'){
-            if (msg.proof === expected){
-              authed = true; clearTimeout(kill); hostConns.add(conn);
-              conn.send({t:'welcome'});
-              hlog('computer joined (' + hostConns.size + ' connected)');
-              hstatus('Hosting. ' + hostConns.size + ' computer(s) connected.', 'ok');
-            } else { conn.send({t:'denied'}); setTimeout(()=>conn.close(),200); hlog('join refused: wrong code'); }
-            return;
-          }
-          if (!authed) return;
-          if (msg.t === 'fetch'){
-            if (!$('hallow').checked){ conn.send({t:'result', id:msg.id, error:'The host has paused fetching.'}); return; }
-            hlog('fetch ' + String(msg.url).slice(0,200));
-            try{
-              const res = await hostFetch(String(msg.url));
-              conn.send({t:'result', id:msg.id, body:res.body, type:res.type});
-            }catch(e){ conn.send({t:'result', id:msg.id, error:e.message}); }
-          }
-        }catch(e){ /* ignore malformed */ }
-      });
-      conn.on('close', () => {
-        if (hostConns.delete(conn)){ hlog('computer left'); hstatus('Hosting. ' + hostConns.size + ' computer(s) connected.', 'ok'); }
-      });
-    });
-  }
-  function stopHost(){
-    if (hostPeer) hostPeer.destroy();
-    hostPeer = null; hostConns.clear();
-    $('hstop').classList.add('hidden'); $('hstart').classList.remove('hidden'); $('hstart').disabled = false;
-    hstatus('Stopped.'); hlog('hosting stopped');
-  }
-
-  /* ---------------- JOIN ---------------- */
-  let joinPeer = null, joinConn = null;
-  const pending = new Map();
-  let reqN = 0;
-  const history = [];
-
-  function jstatus(msg, cls){ const s=$('jstatus'); s.textContent=msg; s.className='status '+(cls||''); }
-
-  async function startJoin(){
-    const name = $('jname').value, code = $('jcode').value;
-    if (!name.trim() || !code){ jstatus('Enter the host name and code.', 'err'); return; }
-    $('jstart').disabled = true; jstatus('Connecting…');
-    const id = await roomId(name, code);
-    const myProof = await proof(name, code);
-    joinPeer = new Peer();
-    joinPeer.on('error', e => {
-      $('jstart').disabled = false;
-      jstatus(e.type === 'peer-unavailable' ? 'No host found with that name and code.' : 'Connection problem: ' + e.type, 'err');
-    });
-    joinPeer.on('open', () => {
-      joinConn = joinPeer.connect(id, {reliable:true});
-      const to = setTimeout(() => { jstatus('The host did not answer.', 'err'); leave(true); }, 15000);
-      joinConn.on('open', () => joinConn.send({t:'hello', proof:myProof}));
-      joinConn.on('data', msg => {
-        if (msg.t === 'welcome'){
-          clearTimeout(to);
-          jstatus('Connected to “' + name.trim() + '”.', 'ok');
-          $('jstop').classList.remove('hidden'); $('jstart').classList.add('hidden'); $('jstart').disabled = false;
-          $('browser').classList.remove('hidden'); $('q').focus();
-        } else if (msg.t === 'denied'){
-          clearTimeout(to); jstatus('Wrong code.', 'err'); leave(true);
-        } else if (msg.t === 'result'){
-          const p = pending.get(msg.id);
-          if (p){ pending.delete(msg.id); msg.error ? p.rej(new Error(msg.error)) : p.res(msg); }
-        }
-      });
-      joinConn.on('close', () => { jstatus('Disconnected from host.', 'err'); leave(true); });
-    });
-  }
-  function leave(keepStatus){
-    if (joinPeer) joinPeer.destroy();
-    joinPeer = null; joinConn = null; pending.clear();
-    $('jstop').classList.add('hidden'); $('jstart').classList.remove('hidden'); $('jstart').disabled = false;
-    $('browser').classList.add('hidden');
-    if (!keepStatus) jstatus('Left.');
-  }
-
-  function remoteFetch(url){
-    return new Promise((res, rej) => {
-      if (!joinConn || !joinConn.open) return rej(new Error('Not connected'));
-      const id = ++reqN;
-      const t = setTimeout(() => { pending.delete(id); rej(new Error('The host took too long')); }, 40000);
-      pending.set(id, {res: v => {clearTimeout(t); res(v);}, rej: e => {clearTimeout(t); rej(e);}});
-      joinConn.send({t:'fetch', id, url});
-    });
-  }
-
-  /* ---------------- VIEWER ---------------- */
   const shadow = $('viewport').attachShadow({mode:'open'});
   shadow.innerHTML = `<style>
-    :host{display:block}
-    .page{padding:18px 22px;font:16px/1.55 Georgia,serif;color:#111;max-width:100%;overflow-wrap:anywhere}
+    .page{padding:18px 22px;font:16px/1.55 Georgia,serif;color:#111;overflow-wrap:anywhere}
     a{color:#0645ad;cursor:pointer;text-decoration:underline}
-    img,video{max-width:100%;height:auto}
-    table{max-width:100%}
-    .msg{padding:24px;font-family:system-ui,sans-serif;color:#444}
-    .msg.err{color:#b42318}
+    img,video{max-width:100%;height:auto} table{max-width:100%}
+    .msg{padding:24px;font-family:system-ui,sans-serif;color:#444} .msg.err{color:#b42318}
   </style><div class="page" id="p"></div>`;
   const pageEl = shadow.getElementById('p');
+  const hist = [];
 
-  function looksLikeUrl(s){
-    if (/^https?:\/\//i.test(s)) return true;
-    return !/\s/.test(s) && /^[^\s/]+\.[a-z]{2,}(\/.*)?$/i.test(s);
-  }
-  function toUrl(input){
-    input = input.trim();
-    if (looksLikeUrl(input)) return /^https?:\/\//i.test(input) ? input : 'https://' + input;
-    return 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(input);
-  }
-
+  const looksLikeUrl = s => /^https?:\/\//i.test(s) || (!/\s/.test(s) && /^[^\s/]+\.[a-z]{2,}(\/.*)?$/i.test(s));
+  const toUrl = s => {
+    s = s.trim();
+    if (looksLikeUrl(s)) return /^https?:\/\//i.test(s) ? s : 'https://' + s;
+    return 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(s);
+  };
   function resolveHref(href, base){
     try{
-      let u = new URL(href, base);
+      const u = new URL(href, base);
       if (u.hostname.endsWith('duckduckgo.com') && u.pathname === '/l/' && u.searchParams.get('uddg')) return u.searchParams.get('uddg');
       return /^https?:$/.test(u.protocol) ? u.href : null;
     }catch{ return null; }
   }
-
+  function showMsg(text, err){
+    pageEl.innerHTML = '';
+    const d = document.createElement('div'); d.className = 'msg' + (err ? ' err' : ''); d.textContent = text;
+    pageEl.append(d);
+  }
   function render(html, base){
     const doc = new DOMParser().parseFromString(html, 'text/html');
     doc.querySelectorAll('script,style,iframe,frame,object,embed,form,link,meta,base,noscript,svg,canvas,template').forEach(n => n.remove());
-    const loadImgs = $('imgs').checked;
-    if (!loadImgs) doc.querySelectorAll('img,picture,source,video,audio').forEach(n => n.remove());
+    if (!$('imgs').checked) doc.querySelectorAll('img,picture,source,video,audio').forEach(n => n.remove());
     doc.querySelectorAll('*').forEach(el => {
       for (const a of [...el.attributes]){
         const n = a.name.toLowerCase();
-        if (n.startsWith('on') || n === 'style' || n === 'srcset' || n === 'class' || n === 'id') el.removeAttribute(a.name);
+        if (n.startsWith('on') || ['style','srcset','class','id'].includes(n)) el.removeAttribute(a.name);
       }
       if (el.tagName === 'A'){
         const h = resolveHref(el.getAttribute('href') || '', base);
-        el.removeAttribute('href');
-        if (h) el.dataset.go = h;
+        el.removeAttribute('href'); if (h) el.dataset.go = h;
       } else if (el.tagName === 'IMG'){
         const s = resolveHref(el.getAttribute('src') || '', base);
-        if (s) el.setAttribute('src', s); else el.remove();
-        el.setAttribute('referrerpolicy', 'no-referrer');
+        if (s){ el.setAttribute('src', s); el.setAttribute('referrerpolicy','no-referrer'); } else el.remove();
       }
     });
     pageEl.innerHTML = '';
     pageEl.append(...doc.body.childNodes);
   }
 
-  function showMsg(text, err){
-    pageEl.innerHTML = '';
-    const d = document.createElement('div'); d.className = 'msg' + (err ? ' err' : ''); d.textContent = text;
-    pageEl.append(d);
-  }
-
   async function navigate(input, push = true){
+    const worker = $('wurl').value.trim(), key = $('wkey').value;
+    if (!worker || !key){ $('settings').open = true; showMsg('Enter your Worker address and key first.', true); return; }
+    store.set('wurl', worker); store.set('wkey', key);
     const url = toUrl(input);
-    $('loadnote').textContent = 'Fetching through host…';
-    showMsg('Loading…');
+    $('note').textContent = 'Fetching…'; showMsg('Loading…');
     try{
-      const r = await remoteFetch(url);
-      if (/^(image|video|audio|application\/(?!xhtml))/.test(r.type) && !/html|text|xml|json/.test(r.type)){
-        showMsg('This address is a file, not a page.', true);
-      } else if (/json|plain/.test(r.type) && !/html/.test(r.type)){
-        pageEl.innerHTML = ''; const pre = document.createElement('pre'); pre.style.whiteSpace='pre-wrap'; pre.textContent = r.body; pageEl.append(pre);
-      } else render(r.body, url);
-      if (push) history.push(url);
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 30000);
+      const r = await fetch(worker + encodeURIComponent(url), {headers:{'x-key':key}, signal: ctl.signal});
+      clearTimeout(t);
+      if (r.status === 401) throw new Error('Wrong Worker key.');
+      let text = await r.text();
+      if (text.length > 1500000) text = text.slice(0, 1500000);
+      const type = r.headers.get('content-type') || '';
+      if (/json|plain/.test(type) && !/html/.test(type)){
+        pageEl.innerHTML = ''; const pre = document.createElement('pre'); pre.style.whiteSpace = 'pre-wrap'; pre.textContent = text; pageEl.append(pre);
+      } else if (/html|xml/.test(type)) render(text, url);
+      else throw new Error('That address is a file, not a page.');
+      if (push) hist.push(url);
       $('q').value = url.startsWith('https://html.duckduckgo.com/html/') ? decodeURIComponent(url.split('q=')[1] || '') : url;
-      $('loadnote').textContent = 'Fetched by the host computer.';
+      $('note').textContent = 'Fetched through your Cloudflare Worker.';
       $('viewport').scrollTop = 0;
     }catch(e){
-      showMsg(e.message, true);
-      $('loadnote').textContent = '';
+      showMsg(e.name === 'AbortError' ? 'The Worker took too long.' : e.message, true);
+      $('note').textContent = '';
     }
   }
 
@@ -362,16 +145,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
     const a = e.target.closest && e.target.closest('a');
     if (a && a.dataset.go){ e.preventDefault(); navigate(a.dataset.go); }
   });
-
-  /* ---------------- WIRING ---------------- */
-  $('hstart').onclick = startHost;
-  $('hstop').onclick = stopHost;
-  $('jstart').onclick = startJoin;
-  $('jstop').onclick = () => leave(false);
   $('go').onclick = () => { if ($('q').value.trim()) navigate($('q').value); };
   $('q').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
-  $('back').onclick = () => { if (history.length > 1){ history.pop(); navigate(history.pop(), true); } };
-  window.addEventListener('beforeunload', () => { if (hostPeer) hostPeer.destroy(); });
+  $('back').onclick = () => { if (hist.length > 1){ hist.pop(); navigate(hist.pop(), true); } };
 })();
 </script>
 </body>
